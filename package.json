@@ -8,7 +8,17 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@types/cannon": "^0.1.8",
+    "@types/three": "^0.135.0",
+    "cannon": "^0.6.2",
     "core-js": "^3.6.5",
+    "less": "^4.1.2",
+    "sass": "^1.45.1",
+    "sass-loader": "^12.4.0",
+    "scss": "^0.2.4",
+    "three": "^0.136.0",
+    "three-orbitcontrols-ts": "^0.1.2",
+    "threejs-dice": "^1.1.0",
     "vue": "^3.0.0",
     "vue-class-component": "^8.0.0-0"
   },
