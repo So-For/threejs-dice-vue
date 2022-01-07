@@ -208,11 +208,20 @@ export default defineComponent({
       init()
     })
 
+    // const handleClickCanvas = (e: any) => {
+    //   if (!threeJSRef.value) return
+    //   const canvasDom = document.querySelector('canvas')
+    //   if (!canvasDom) return
+    //   const canvasInfo = canvasDom.getBoundingClientRect()    
+    //   console.log(ctx.isPointInPath(e.clientX - canvasInfo.left, e.clientY - canvasInfo.top))
+    // }
+
     return {
       ...toRefs(data),
       diceContainerRef,
       threeJSRef,
-      close
+      close,
+      // handleClickCanvas
     }
   }
 })
@@ -227,13 +236,12 @@ export default defineComponent({
   top: 0;
 
   z-index: 999;
- 
 }
- .inner-box {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
+.inner-box {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
 </style>
