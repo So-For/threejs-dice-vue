@@ -38,7 +38,7 @@ export default defineComponent({
     const diceContainerRef = ref<HTMLElement>()
     const threeJSRef = ref<HTMLElement>()
 
-    const init = () => {
+    const init = async () => {
       if (!diceContainerRef.value || !threeJSRef.value) return
       // SCENE
       const scene = new THREE.Scene()
@@ -141,62 +141,66 @@ export default defineComponent({
 
       // Walls
       // 生成一个骰子
-      const dice = new DiceD6({ size: 4, backColor: '#ff0000' })
-      scene.add(dice.getObject())
+      const dice = await new DiceD6({ size: 4, backColor: '#ff0000' })
 
-      function randomDiceThrow() {
-        const diceValues = []
+      setTimeout(() => {
+        console.log(dice.object)
+        scene.add(dice.getObject())
+        function randomDiceThrow() {
+          const diceValues = []
 
-        dice.resetBody()
-        // 投掷点坐标 x,y,z 均为0时,投掷点在canvas中心
-        dice.getObject().position.x = -28
-        dice.getObject().position.y = 2
-        dice.getObject().position.z = -22
-        dice.getObject().quaternion.x = 0
-        dice.getObject().quaternion.z = 0
-        dice.updateBodyFromMesh()
-        const rand = Math.random() * 2
+          dice.resetBody()
+          // 投掷点坐标 x,y,z 均为0时,投掷点在canvas中心
+          dice.getObject().position.x = -28
+          dice.getObject().position.y = 2
+          dice.getObject().position.z = -22
+          dice.getObject().quaternion.x = 0
+          dice.getObject().quaternion.z = 0
+          dice.updateBodyFromMesh()
+          const rand = Math.random() * 2
 
-        // 初速度
-        dice.getObject().body.velocity.set(31 + rand, 27 + rand, 25)
+          // 初速度
+          dice.getObject().body.velocity.set(31 + rand, 27 + rand, 25)
 
-        // 速度角度(控制旋转)
-        dice.getObject().body.angularVelocity.set(20, 15, 0)
-        // 20 * Math.random() - 10,
-        // 20 * Math.random() - 10,
-        // 20 * Math.random() - 10
+          // 速度角度(控制旋转)
+          dice.getObject().body.angularVelocity.set(20, 15, 0)
+          // 20 * Math.random() - 10,
+          // 20 * Math.random() - 10,
+          // 20 * Math.random() - 10
 
-        // 骰子结果
-        const value = Math.ceil(Math.random() * 6) || 1
+          // 骰子结果
+          // const value = Math.ceil(Math.random() * 6) || 1
+          const value = 6
 
-        diceValues.push({ dice: dice, value })
+          diceValues.push({ dice: dice, value })
 
-        DiceManager.prepareValues(diceValues)
-      }
+          DiceManager.prepareValues(diceValues)
+        }
 
-      randomDiceThrow()
+        randomDiceThrow()
 
-      requestAnimationFrame(animate)
-
-      function animate() {
-        updatePhysics()
-        render()
-        update()
         requestAnimationFrame(animate)
-      }
 
-      function updatePhysics() {
-        world.step(1.0 / 60.0)
-        dice.updateMeshFromBody()
-      }
+        function animate() {
+          updatePhysics()
+          render()
+          update()
+          requestAnimationFrame(animate)
+        }
 
-      function update() {
-        controls.update()
-      }
+        function updatePhysics() {
+          world.step(1.0 / 60.0)
+          dice.updateMeshFromBody()
+        }
 
-      function render() {
-        renderer.render(scene, camera)
-      }
+        function update() {
+          controls.update()
+        }
+
+        function render() {
+          renderer.render(scene, camera)
+        }
+      }, 500)
     }
 
     const close = () => {
@@ -212,7 +216,7 @@ export default defineComponent({
     //   if (!threeJSRef.value) return
     //   const canvasDom = document.querySelector('canvas')
     //   if (!canvasDom) return
-    //   const canvasInfo = canvasDom.getBoundingClientRect()    
+    //   const canvasInfo = canvasDom.getBoundingClientRect()
     //   console.log(ctx.isPointInPath(e.clientX - canvasInfo.left, e.clientY - canvasInfo.top))
     // }
 
@@ -220,7 +224,7 @@ export default defineComponent({
       ...toRefs(data),
       diceContainerRef,
       threeJSRef,
-      close,
+      close
       // handleClickCanvas
     }
   }

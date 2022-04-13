@@ -2,12 +2,13 @@
 'use strict';
 import * as CANNON from 'cannon';
 import * as THREE from 'three';
-
+import imgs from './imgs'
 class DiceManagerClass {
     constructor() {
         this.world = null;
     }
 
+    /** 设置物理参数 */
     setWorld(world) {
         this.world = world;
 
@@ -103,16 +104,19 @@ class DiceObject {
         this.object = null;
         this.size = options.size;
         this.invertUpside = false;
-
+        // 基础色（红色）
+        this.baseColor = '#de482b'
         this.materialOptions = {
-            specular: 0x172022,
-            color: 0xde482b,
-            shininess: 40,
-            flatShading: true,
+            // 材质的颜色
+            // color: 0xde482b,
+            // // 材质的高光颜色
+            // specular: 0xde482b,
+            // // specular高亮的程度，越高的值越闪亮
+            // shininess: 0,
+            // // 定义材质是否使用平面着色进行渲染
+            // flatShading: true,
             //shading: THREE.FlatShading,
         };
-        this.labelColor = options.fontColor;
-        this.diceColor = options.backColor;
     }
 
     setDefaults(options, defaults) {
@@ -321,7 +325,6 @@ class DiceObject {
                 uvs.push((Math.cos(af) + 1 + tab) / 2 / (1 + tab), (Math.sin(af) + 1 + tab) / 2 / (1 + tab));
                 uvs.push((Math.cos(aa * (j + 1) + af) + 1 + tab) / 2 / (1 + tab), (Math.sin(aa * (j + 1) + af) + 1 + tab) / 2 / (1 + tab));
                 uvs.push((Math.cos(aa * (j + 2) + af) + 1 + tab) / 2 / (1 + tab), (Math.sin(aa * (j + 2) + af) + 1 + tab) / 2 / (1 + tab));
-
             }
 
             //Set Group for face materials.
@@ -332,7 +335,6 @@ class DiceObject {
             }
 
         }
-
 
         geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -355,7 +357,7 @@ class DiceObject {
 
     getGeometry() {
         const radius = this.size * this.scaleFactor;
-
+        console.log(radius)
         const vectors = new Array(this.vertices.length);
         for (let i = 0; i < this.vertices.length; ++i) {
             vectors[i] = (new THREE.Vector3).fromArray(this.vertices[i]).normalize();
@@ -368,41 +370,49 @@ class DiceObject {
         return geometry;
     }
 
-    calculateTextureSize(approx) {
-        return Math.max(128, Math.pow(2, Math.floor(Math.log(approx) / Math.log(2))));
+    getImage(imgUrl, context, index) {
+        return new Promise((resolve, reject) => {
+            var imgObj = new Image()
+            let currentIdx = 0
+            if (index > 2) {
+                currentIdx = index - 2
+            }
+            imgObj.src = imgs[currentIdx]
+            imgObj.onload = function () {
+
+                if (index > 1) context.drawImage(imgObj, 0, 0, 300, 300);
+
+                resolve('')
+            }
+        })
     }
 
-    createTextTexture(text, color, backColor) {
+    /** 获取物体材质 */
+    async createTextTexture(index) {
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
-        const ts = this.calculateTextureSize(this.size / 2 + this.size * this.textMargin) * 2;
-        canvas.width = canvas.height = ts;
-        context.font = ts / (1 + 2 * this.textMargin) + "pt Arial";
-        context.fillStyle = backColor;
+        canvas.width = canvas.height = 300;
+        context.fillStyle = this.baseColor;
+
         context.fillRect(0, 0, canvas.width, canvas.height);
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.fillStyle = color;
-        context.fillText(text, canvas.width / 2, canvas.height / 2);
-        // const texture = new THREE.Texture(canvas);
-        console.log(text);
-        const imgUrl = require(`./assets/6.png`)
-        const texture = new THREE.TextureLoader().load(imgUrl)
-        // texture.needsUpdate = true;
+        await this.getImage(`//image.yitong.com/ysy/demo/${index < 2 ? '1' : this.faceTexts[index]}.png`, context, index)
+        const texture = new THREE.Texture(canvas);
+
+        texture.needsUpdate = true;
         return texture;
     }
-
-    getMaterials() {
+    async getMaterials() {
         const materials = [];
         for (let i = 0; i < this.faceTexts.length; ++i) {
-            let texture = null;
-
-            if (this.customTextTextureFunction) {
-                texture = this.customTextTextureFunction(this.faceTexts[i], this.labelColor, this.diceColor);
-            } else {
-                texture = this.createTextTexture(this.faceTexts[i], this.labelColor, this.diceColor);
-            }
-
+            const texture = null
+            texture = await this.createTextTexture(i)
+            /**
+             * MeshPhongMaterial 一种用于具有镜面高光的 光泽 表面的材质。
+             * MeshBasicMaterial 以简单着色（平面或线框）方式来绘制几何体的材质 不受光照的影响
+             * 
+             * 参数说明
+             * map 颜色贴图 (纹理贴图颜色由漫反射颜色.color调节。)
+             */
             materials.push(new THREE.MeshPhongMaterial(Object.assign({}, this.materialOptions, { map: texture })));
         }
         return materials;
@@ -412,16 +422,21 @@ class DiceObject {
         return this.object;
     }
 
-    create() {
+    async create() {
         if (!DiceManager.world) throw new Error('You must call DiceManager.setWorld(world) first.');
-        this.object = new THREE.Mesh(this.getGeometry(), this.getMaterials());
+        console.log(this.getGeometry())
+        const Materials = await this.getMaterials()
+        this.object = new THREE.Mesh(this.getGeometry(), Materials);
+        // this.object = new THREE.Mesh(new THREE.BoxGeometry( 200, 200, 200 ), this.getMaterials());
 
         this.object.reveiceShadow = true;
-        this.object.castShadow = true;
+        // 对象是否被渲染到阴影贴图中
+        this.object.castShadow = false;
         this.object.diceObject = this;
         this.object.body = new CANNON.Body({
             mass: this.mass,
             shape: this.object.geometry.cannon_shape,
+            // cannon的 材料属性：摩擦力、弹性等
             material: DiceManager.diceBodyMaterial
         });
         this.object.body.linearDamping = 0.1;
@@ -444,35 +459,38 @@ class DiceObject {
     }
 
     resetBody() {
-        this.object.body.vlambda = new CANNON.Vec3();
-        //this.object.body.collisionResponse = true;
-        this.object.body.position = new CANNON.Vec3();
-        this.object.body.previousPosition = new CANNON.Vec3();
-        this.object.body.initPosition = new CANNON.Vec3();
-        this.object.body.velocity = new CANNON.Vec3();
-        this.object.body.initVelocity = new CANNON.Vec3();
-        this.object.body.force = new CANNON.Vec3();
-        //this.object.body.sleepState = 0;
-        //this.object.body.timeLastSleepy = 0;
-        //this.object.body._wakeUpAfterNarrowphase = false;
-        this.object.body.torque = new CANNON.Vec3();
-        this.object.body.quaternion = new CANNON.Quaternion();
-        this.object.body.initQuaternion = new CANNON.Quaternion();
-        this.object.body.angularVelocity = new CANNON.Vec3();
-        this.object.body.initAngularVelocity = new CANNON.Vec3();
-        this.object.body.interpolatedPosition = new CANNON.Vec3();
-        this.object.body.interpolatedQuaternion = new CANNON.Quaternion();
-        this.object.body.inertia = new CANNON.Vec3();
-        this.object.body.invInertia = new CANNON.Vec3();
-        this.object.body.invInertiaWorld = new CANNON.Mat3();
-        //this.object.body.invMassSolve = 0;
-        this.object.body.invInertiaSolve = new CANNON.Vec3();
-        this.object.body.invInertiaWorldSolve = new CANNON.Mat3();
-        //this.object.body.aabb = new CANNON.AABB();
-        //this.object.body.aabbNeedsUpdate = true;
-        this.object.body.wlambda = new CANNON.Vec3();
+        if (this.object) {
+            this.object.body.vlambda = new CANNON.Vec3();
+            //this.object.body.collisionResponse = true;
+            this.object.body.position = new CANNON.Vec3();
+            this.object.body.previousPosition = new CANNON.Vec3();
+            this.object.body.initPosition = new CANNON.Vec3();
+            this.object.body.velocity = new CANNON.Vec3();
+            this.object.body.initVelocity = new CANNON.Vec3();
+            this.object.body.force = new CANNON.Vec3();
+            //this.object.body.sleepState = 0;
+            //this.object.body.timeLastSleepy = 0;
+            //this.object.body._wakeUpAfterNarrowphase = false;
+            this.object.body.torque = new CANNON.Vec3();
+            this.object.body.quaternion = new CANNON.Quaternion();
+            this.object.body.initQuaternion = new CANNON.Quaternion();
+            this.object.body.angularVelocity = new CANNON.Vec3();
+            this.object.body.initAngularVelocity = new CANNON.Vec3();
+            this.object.body.interpolatedPosition = new CANNON.Vec3();
+            this.object.body.interpolatedQuaternion = new CANNON.Quaternion();
+            this.object.body.inertia = new CANNON.Vec3();
+            this.object.body.invInertia = new CANNON.Vec3();
+            this.object.body.invInertiaWorld = new CANNON.Mat3();
+            //this.object.body.invMassSolve = 0;
+            this.object.body.invInertiaSolve = new CANNON.Vec3();
+            this.object.body.invInertiaWorldSolve = new CANNON.Mat3();
+            //this.object.body.aabb = new CANNON.AABB();
+            //this.object.body.aabbNeedsUpdate = true;
+            this.object.body.wlambda = new CANNON.Vec3();
 
-        this.object.body.updateMassProperties();
+            this.object.body.updateMassProperties();
+
+        }
     }
 
     updateMaterialsForValue(diceValue) { }
@@ -480,23 +498,22 @@ class DiceObject {
 export class DiceD6 extends DiceObject {
     constructor(options) {
         super(options);
+        (async () => {
+            this.tab = -0.4;
+            this.af = Math.PI / 4;
+            this.chamfer = 0.9;
+            // 立方体顶点坐标
+            this.vertices = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+            this.faces = [[0, 3, 2, 1, 1], [1, 2, 6, 5, 2], [0, 1, 5, 4, 3], [3, 7, 6, 2, 4], [0, 4, 7, 3, 5], [4, 5, 6, 7, 6]];
+            // 缩放系数
+            this.scaleFactor = 1.5;
+            this.values = 6;
+            this.faceTexts = [' ', '0', '1', '2', '3', '4', '5', '6'];
+            this.mass = 800; // 重量
+            this.inertia = 13; // 惯性
 
-        this.tab = 0.1;
-        this.af = Math.PI / 4;
-        this.chamfer = 0.96;
-        this.vertices = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
-        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
-        this.faces = [[0, 3, 2, 1, 1], [1, 2, 6, 5, 2], [0, 1, 5, 4, 3],
-        [3, 7, 6, 2, 4], [0, 4, 7, 3, 5], [4, 5, 6, 7, 6]];
-        this.scaleFactor = 0.9;
-        this.values = 6;
-        this.faceTexts = [' ', '0', '1', '2', '3', '4', '5', '6', '7', '8',
-            '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-        this.textMargin = 1.0;
-        this.mass = 600; // 重量
-        this.inertia = 13;
-
-        this.create();
+            await this.create();
+        })();
     }
 }
 
